@@ -1,18 +1,10 @@
-from app.parsing.filters import detect_language, is_allowed_file,filter_chunks
-from langchain_core.documents import Document
+from app.parsing.loader import collect_documents
 
-print(detect_language(".py"))  # Expected: "python"
-print(detect_language(".123123"))  # Expected: "unknown"
+docs = collect_documents("tests/fixtures", "test_project", 2)
+print(f"수집된 문서의 개수는?: {len(docs)}")
 
-print(is_allowed_file("test.py"))  # Expected: True
-print(is_allowed_file("test.env"))  # Expected: False
-print(is_allowed_file("node_modules/test.js"))  # Expected: False
+# docs 파일 이름만 추출
+file_names = [doc.metadata["source"] for doc in docs]
 
-chunks = [
-    Document(page_content="짧은 청크", metadata={"source": "file1.py"}),
-    Document(page_content="엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청엄청 길게해보자", metadata={"source": "file2.py"}),
-    Document(page_content="   ", metadata={"source": "file3.py"}),
-]
-filtered_chunks = filter_chunks(chunks)
-print(f"청크 : {filtered_chunks}")
-print(f"수집된 청크의 개수는?: {len(filtered_chunks)}")
+print(f"파일 이름 : {file_names}")
+print(f"문서 출력 : {docs}")
