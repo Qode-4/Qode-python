@@ -59,7 +59,7 @@ def split_documents(docs: list[Document], chunk_size: int = DEFAULT_CHUNK_SIZE, 
             # 청크 메타데이터에 위치 정보 추가
             chunk.metadata.update({
                 "chunk_index": i,              # 이 파일에서 몇 번째 청크
-                "total_chunks": len(chunks),   # 이 파일의 전체 청크 수
+                "total_chunks": len(chunks),   # 이 파일 전체 청크 수
                 "start_line": start_line,      # 원본 시작 줄
                 "end_line": end_line,          # 원본 끝 줄
             })
