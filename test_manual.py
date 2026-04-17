@@ -1,6 +1,5 @@
-from app.parsing import parse_and_chunk                                                                 
-                                                                                                          
-chunks = parse_and_chunk("tests/fixtures", "test_project") 
+from app.parsing import parse_and_chunk
+from app.embedding.store import reindex
 
-print(f"총 청크 수: {len(chunks)}")
-print(f"청크: {chunks}")
+chunks = parse_and_chunk("tests/fixtures", "test_project")
+reindex("test_project", chunks)
