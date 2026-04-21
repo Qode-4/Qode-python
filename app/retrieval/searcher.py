@@ -7,19 +7,20 @@ from langchain_core.documents import Document
 
 load_dotenv()
 
-TOP_K = int(os.getenv("RETRIEVAL_TOP_K", 5))
-
 vectorstore = PGVector(
     embeddings=OpenAIEmbeddings(model="text-embedding-3-small"),
     collection_name=os.getenv("COLLECTION_NAME"),
     connection=os.getenv("DATABASE_URL"),
 )
 
-async def search(query: str, top_k: int = TOP_K) -> list[Document]:
+async def search(query: str, project_id: str, top_k: int) -> list[Document]:
     results = vectorstore.as_retriever(
         search_type="similarity",
         # search_type="similarity_score_threshold", # 비슷한 애들만 가져옴
-        search_kwargs={"k": top_k},
+        search_kwargs={
+            "k": top_k,
+            "filter": {"project_id: project_id"}
+        },
     )
 
     # 유사도 metadata에 같이 넣어주기
