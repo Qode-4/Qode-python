@@ -1,4 +1,4 @@
-# filter.py
+# filter.py - 후 처리 필터
 import os
 from langchain_core.documents import Document
 
