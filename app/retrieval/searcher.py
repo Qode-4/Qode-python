@@ -16,8 +16,19 @@ vectorstore = PGVector(
 )
 
 async def search(query: str, top_k: int = TOP_K) -> list[Document]:
-    retriever = vectorstore.as_retriever(
-        search_type="similarity_score_threshold",
+    results = vectorstore.as_retriever(
+        search_type="similarity",
+        # search_type="similarity_score_threshold", # 비슷한 애들만 가져옴
         search_kwargs={"k": top_k},
     )
-    return await retriever.ainvoke(query)
+
+    # 유사도 metadata에 같이 넣어주기
+    # r = await vectorstore.asimilarity_search_with_relevance_scores(
+    #     query, k = top_k
+    # )
+    # for doc, score in results:
+    #     doc.metadata["score"] = score
+
+    # return [doc for doc, _ in results]
+
+    return await results.ainvoke(query)

@@ -9,15 +9,28 @@ from .reranker import rerank
 async def search_pipeline(query: str) -> dict:
     start_time = time.time()
 
-    raw_results = await search(query)
-    filtered = filter_by_threshold(raw_results)
-    deduped = dedup(filtered)
-    reranked = rerank(query, deduped)
+    try:
+        raw_results = await search(query)
+        filtered = filter_by_threshold(raw_results)
+        deduped = dedup(filtered)
+        reranked = rerank(query, deduped)
 
-    return {
-        "chunks": reranked,
-        "search_meta": {
-            "total_found": len(raw_results),
-            "search_time_ms": int((time.time() - start_time) * 1000),
+        return {
+            "chunks": reranked,
+            "search_meta": {
+                "total_found": len(raw_results),
+                "after_filter": len(filtered),
+                "after_dedup": len(deduped),
+                "final": len(reranked),
+                "search_time_ms": int((time.time() - start_time) * 1000),
+            }
         }
-    }
+    except Exception as e:
+        return {
+            "chunks": [],
+            "search_meta": {
+                "total_found": 0,
+                "error": str(e),
+                "search_time_ms": int((time.time() - start_time) * 1000),
+            }
+        }
