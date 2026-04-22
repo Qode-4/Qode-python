@@ -33,3 +33,6 @@ def embed_documents(chunks: list[Document], batch_size: int = 100) -> list[list[
         print(f"임베딩 진행: {min(i + batch_size, len(chunks))}/{len(chunks)}")
 
     return all_vectors
+
+def embed_query(query: str) -> list[float]:
+    return embeddings.embed_query(query)
