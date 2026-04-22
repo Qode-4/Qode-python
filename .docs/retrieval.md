@@ -3,6 +3,7 @@
 - 단계별 단위 테스트
 - 검색 결과를 토대로 검색 품질 평가
 
+
 # 2. 프로젝트 구조 
 ```
 QODE-PYTHON/
@@ -26,6 +27,7 @@ QODE-PYTHON/
 └── tests/                   # 테스트 코드
 ```
 
+
 # 3. 서버 실행 방법
 ### 서버 실행
 ```
@@ -35,6 +37,7 @@ uvicorn app.api.main:app --reload
 ### 접속 확인
 - 서버: http://127.0.0.1:8000
 - API 문서 (Swagger UI): http://127.0.0.1:8000/docs
+
 
 # 4. API 사용법
 ### POST `/search`
@@ -87,6 +90,7 @@ uvicorn app.api.main:app --reload
 | `after_dedup` | 중복 제거 후 남은 청크 수 |
 | `final` | 최종 반환된 청크 수 |
 | `search_time_ms` | 검색 소요 시간 (밀리초) |
+
 
 # 5. Retrieval 평가 (RAGAS)
 ### RAGAS란?
@@ -160,6 +164,7 @@ QA_PAIRS = [
 ]
 ```
 
-## 7. 주의사항
+
+## 6. 주의사항
 - Python **3.14** 사용 중 → Pydantic V1 호환 경고가 뜨지만 동작에는 문제 없음
 - 현재 DB에 저장된 청크가 3개밖에 없어서 ContextPrecision, ContextRecall 지표가 모두 1.0으로 나옴 → 청크 수가 충분히 늘어난 후 재평가 필요
