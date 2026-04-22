@@ -6,11 +6,11 @@ from .filter import filter_by_threshold
 from .dedup import dedup
 from .reranker import rerank
 
-async def search_pipeline(query: str) -> dict:
+async def search_pipeline(query: str, project_id: str, top_k: int) -> dict:
     start_time = time.time()
 
     try:
-        raw_results = await search(query)
+        raw_results = search(query, project_id, top_k)
         filtered = filter_by_threshold(raw_results)
         deduped = dedup(filtered)
         reranked = rerank(query, deduped)

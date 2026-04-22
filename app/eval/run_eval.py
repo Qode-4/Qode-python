@@ -8,7 +8,7 @@ async def run():
     recall_scores, mrr_scores = [], []
 
     for qa in QA_PAIRS:
-        result = await search_pipeline(qa["query"])
+        result = await search_pipeline(qa["query"], project_id="test_project", top_k=5)
         retrieved = result["chunks"]
 
         recall_scores.append(recall_at_k(retrieved, qa["relevant_keywords"], k=5))

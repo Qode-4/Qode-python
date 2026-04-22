@@ -1,35 +1,47 @@
-# searcher.py - pgvector, faiss에서 유사도 검색
+# searcher.py
 import os
+import json
+import psycopg
 from dotenv import load_dotenv
-from langchain_openai import OpenAIEmbeddings
-from langchain_postgres import PGVector
 from langchain_core.documents import Document
+from langchain_core.retrievers import BaseRetriever
+from app.embedding.embedder import embed_query
 
 load_dotenv()
 
-vectorstore = PGVector(
-    embeddings=OpenAIEmbeddings(model="text-embedding-3-small"),
-    collection_name=os.getenv("COLLECTION_NAME"),
-    connection=os.getenv("DATABASE_URL"),
-)
+def get_connection():
+    return psycopg.connect(os.getenv("DATABASE_URL"))
 
-async def search(query: str, project_id: str, top_k: int) -> list[Document]:
-    results = vectorstore.as_retriever(
-        search_type="similarity",
-        # search_type="similarity_score_threshold", # 비슷한 애들만 가져옴
-        search_kwargs={
-            "k": top_k,
-            "filter": {"project_id: project_id"}
-        },
-    )
+class CodeRetriever(BaseRetriever):
+    project_id: str
+    top_k: int = 5
 
-    # 유사도 metadata에 같이 넣어주기
-    # r = await vectorstore.asimilarity_search_with_relevance_scores(
-    #     query, k = top_k
-    # )
-    # for doc, score in results:
-    #     doc.metadata["score"] = score
+    def _get_relevant_documents(self, query: str) -> list[Document]:
+        query_vector = embed_query(query)
+        
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT content, metadata,
+                           1 - (embedding <=> %s::vector) AS score
+                    FROM code_embeddings
+                    WHERE project_id = %s
+                    ORDER BY embedding <=> %s::vector
+                    LIMIT %s
+                    """,
+                    (query_vector, self.project_id, query_vector, self.top_k)
+                )
+                rows = cur.fetchall()
+        
+        return [
+            Document(
+                page_content=row[0],
+                metadata={**row[1], "score": row[2]}
+            )
+            for row in rows
+        ]
 
-    # return [doc for doc, _ in results]
-
-    return await results.ainvoke(query)
+def search(query: str, project_id: str, top_k: int) -> list[Document]:
+    retriever = CodeRetriever(project_id=project_id, top_k=top_k)
+    return retriever.invoke(query)
