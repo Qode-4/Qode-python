@@ -149,7 +149,7 @@ result = await precision_scorer.ascore(
 
 ### 메트릭 설명
 | 메트릭 | 설명 |
-|--------|------|:-----------------:|
+|--------|------|
 | `ContextPrecisionWithReference` | 검색된 청크 중 실제 유용한 비율 |
 | `ContextRecall` | 정답에 필요한 내용이 검색됐는지 |
 
