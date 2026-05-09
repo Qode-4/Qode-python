@@ -48,8 +48,7 @@ class IndexResult(BaseModel):
 ```python
 # Response
 {
-    "status": "ok",
-    "version": "1.0.0"
+    "status": "ok"
 }
 ```
 
