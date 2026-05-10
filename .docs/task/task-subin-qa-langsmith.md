@@ -14,14 +14,42 @@
 
 ## 입력 인터페이스 (혜수의 Python 서비스에서 HTTP로 받는 것)
 
+현재 Python RAG 서비스의 `POST /search` 응답은 원본 청크 본문을 `content`에 담고, 유사도 점수는 `metadata.score`에 담아준다. TypeScript 쪽에서는 이 raw 응답을 그대로 프롬프트에 쓰지 말고, 먼저 `normalizeSearchResult()`로 내부 표준 타입으로 변환해서 사용한다.
+
 ```typescript
-// Python 서비스 POST /search 의 응답을 TypeScript 타입으로 정의
-interface SearchResult {
-  chunks: RetrievedChunk[];
+// Python 서비스 POST /search 실제 응답 타입
+interface PythonSearchResult {
+  chunks: PythonRetrievedChunk[];
   search_meta: {
     total_found: number;
+    after_filter?: number;
+    after_dedup?: number;
+    final?: number;
     search_time_ms: number;
+    error?: string;
   };
+}
+
+interface PythonRetrievedChunk {
+  content: string;
+  metadata: {
+    source: string;
+    language: string;
+    extension?: string;
+    file_size?: number;
+    project_id: string;
+    chunk_index: number;
+    total_chunks: number;
+    start_line?: number;
+    end_line?: number;
+    score: number;
+  };
+}
+
+// Node.js 내부에서 사용할 표준 타입
+interface SearchResult {
+  chunks: RetrievedChunk[];
+  search_meta: PythonSearchResult["search_meta"];
 }
 
 interface RetrievedChunk {
@@ -34,6 +62,24 @@ interface RetrievedChunk {
     start_line?: number;
     end_line?: number;
     project_id: string;
+    extension?: string;
+    file_size?: number;
+    total_chunks?: number;
+  };
+}
+
+function normalizeSearchResult(result: PythonSearchResult): SearchResult {
+  return {
+    search_meta: result.search_meta,
+    chunks: result.chunks.map((chunk) => {
+      const { score, ...metadata } = chunk.metadata;
+
+      return {
+        page_content: chunk.content,
+        score,
+        metadata,
+      };
+    }),
   };
 }
 ```
@@ -44,16 +90,16 @@ interface RetrievedChunk {
 
 ### 1. Python RAG 서비스 호출 클라이언트
 
-혜수의 Python 서비스를 HTTP로 호출하는 코드.
+혜수의 Python 서비스를 HTTP로 호출하는 코드. 호출 함수는 Python의 raw 응답을 받은 뒤 내부 표준 타입으로 normalize해서 반환한다.
 
 ```typescript
 const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || "http://localhost:8000";
 
-async function searchChunks(
+async function searchChunksRaw(
   query: string,
   projectId: string,
   topK: number = 5
-): Promise<SearchResult> {
+): Promise<PythonSearchResult> {
   const response = await fetch(`${RAG_SERVICE_URL}/search`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -69,6 +115,15 @@ async function searchChunks(
   }
 
   return response.json();
+}
+
+async function searchChunks(
+  query: string,
+  projectId: string,
+  topK: number = 5
+): Promise<SearchResult> {
+  const raw = await searchChunksRaw(query, projectId, topK);
+  return normalizeSearchResult(raw);
 }
 ```
 
@@ -97,8 +152,9 @@ function buildRAGPrompt(
     })
     .join("\n\n");
 
-  return `다음 코드를 참고하여 질문에 답하세요.
-출처 파일 경로도 함께 알려주세요.
+  return `너는 Qode의 코드 어시스턴트다.
+아래 참고 코드만 근거로 답변하고, 알 수 없는 내용은 추측하지 말고 모른다고 말한다.
+답변에는 관련 파일 경로와 라인 범위를 함께 포함한다.
 
 참고 코드:
 ${contextBlock}
@@ -111,6 +167,10 @@ ${contextBlock}
 - 프롬프트 템플릿 구조 (시스템 프롬프트 / 코드 컨텍스트 / 질문의 순서)
 - 출처 표시를 프롬프트에서 지시할지, 후처리로 붙일지
 - 최근 채팅 히스토리를 어떻게 함께 넣을지
+
+**주의할 것:**
+- 프롬프트 조립은 반드시 `normalizeSearchResult()` 이후의 `SearchResult` 기준으로 한다.
+- Python raw 응답의 `content`, `metadata.score`를 직접 여러 곳에서 참조하지 않는다. raw 응답 형태가 바뀌어도 adapter만 고치면 되게 만든다.
 
 ### 3. context 길이 조절
 
@@ -175,6 +235,25 @@ function formatResponse(
 }
 ```
 
+`deduplicateSources()`는 같은 파일/라인 범위가 여러 번 들어오면 가장 높은 점수 하나만 남긴다.
+
+```typescript
+function deduplicateSources(sources: SourceInfo[]): SourceInfo[] {
+  const byKey = new Map<string, SourceInfo>();
+
+  for (const source of sources) {
+    const key = `${source.filePath}:${source.lineRange ?? ""}`;
+    const existing = byKey.get(key);
+
+    if (!existing || source.relevanceScore > existing.relevanceScore) {
+      byKey.set(key, source);
+    }
+  }
+
+  return [...byKey.values()];
+}
+```
+
 ### 5. 기존 LLM/SSE 연결
 
 기존 Qode의 LLM 호출 + SSE 스트리밍 코드에 RAG 프롬프트를 연결한다.
@@ -190,7 +269,7 @@ async function handleChat(question: string, projectId: string) {
 
 // RAG 코드 (수정 후)
 async function handleChat(question: string, projectId: string) {
-  // ★ Python RAG 서비스 HTTP 호출
+  // Python RAG 서비스 HTTP 호출 + normalize
   const searchResult = await searchChunks(question, projectId, 5);
 
   const history = await getRecentMessages(chatRoomId);
@@ -209,6 +288,7 @@ async function handleChat(question: string, projectId: string) {
 - 기존 `getAnalysisCache()` → `searchChunks()` (Python 서비스 HTTP 호출)로 교체
 - 기존 `buildCAGPrompt()` → `buildRAGPrompt()` 로 교체
 - 기존 `streamLLMResponse()` 는 그대로 사용
+- Python 응답 형태 차이는 `normalizeSearchResult()`에서만 처리
 
 ### 6. LangSmith 연동
 
@@ -258,6 +338,7 @@ const tracedRAGPipeline = traceable(
 LangSmith 대시보드:
 ├ 각 질문별 전체 파이프라인 trace
 │  ├ 검색 단계: Python 서비스 호출 시간, 반환된 청크, 유사도 점수
+│  ├ 검색 메타: total_found, after_filter, after_dedup, final
 │  ├ 프롬프트: 실제 조립된 프롬프트 전문
 │  ├ LLM 호출: 토큰 사용량, 응답 시간
 │  └ 최종 응답
@@ -317,32 +398,51 @@ await evaluate(
 
 채연, 예지, 혜수와 **병렬 가능**하다.
 
-수빈은 mock SearchResult로 프롬프트 설계와 LangSmith 셋업을 먼저 할 수 있다:
+수빈은 mock Python 응답과 normalized SearchResult로 프롬프트 설계와 LangSmith 셋업을 먼저 할 수 있다:
 
 ```typescript
-// mock SearchResult (수빈이 테스트용으로 직접 만듦)
-const mockSearchResult: SearchResult = {
+// mock PythonSearchResult (실제 Python API 응답 형태)
+const mockPythonSearchResult: PythonSearchResult = {
   chunks: [
     {
-      page_content: "export function verifyToken(token: string) {\n  return jwt.verify(token, SECRET);\n}",
-      score: 0.92,
+      content: "export function verifyToken(token: string) {\n  return jwt.verify(token, SECRET);\n}",
       metadata: {
         source: "src/auth.ts",
         language: "typescript",
+        extension: ".ts",
+        file_size: 2048,
         chunk_index: 0,
+        total_chunks: 5,
         start_line: 12,
         end_line: 15,
         project_id: "test",
+        score: 0.92,
       },
     },
   ],
-  search_meta: { total_found: 5, search_time_ms: 45 },
+  search_meta: {
+    total_found: 5,
+    after_filter: 5,
+    after_dedup: 1,
+    final: 1,
+    search_time_ms: 45,
+  },
 };
 
 // 이걸로 프롬프트 설계 + answer formatting 테스트
+const mockSearchResult = normalizeSearchResult(mockPythonSearchResult);
 const prompt = buildRAGPrompt(mockSearchResult, "인증 로직 어디에 있어?", []);
 console.log(prompt);
 ```
+
+## 개발 시작 순서
+
+1. `PythonSearchResult`, `SearchResult`, `RetrievedChunk`, `SourceInfo` 타입을 만든다.
+2. `searchChunksRaw()`로 Python `/search`를 호출한다.
+3. `normalizeSearchResult()`로 `content`와 `metadata.score`를 내부 표준 타입의 `page_content`, `score`로 변환한다.
+4. 이후 모든 프롬프트/출처/트레이싱 코드는 normalized `SearchResult`만 사용한다.
+5. 실제 API 연결 전에는 `mockPythonSearchResult`로 `buildRAGPrompt()`, `trimContext()`, `formatResponse()`를 먼저 테스트한다.
+6. LangSmith trace에는 검색 결과뿐 아니라 `search_meta.total_found`, `after_filter`, `after_dedup`, `final`, `search_time_ms`도 함께 남긴다.
 
 ---
 
@@ -365,10 +465,10 @@ console.log(prompt);
 
 | 주차 | 작업 | 비고 |
 |------|------|------|
-| Week 1 | prompt template 초안 설계 + Python 서비스 호출 클라이언트 구현 | mock SearchResult로 실험 |
+| Week 1 | prompt template 초안 설계 + Python 서비스 호출 클라이언트 구현 | mock PythonSearchResult와 adapter로 실험 |
 | Week 1-2 | context 길이 조절 로직 + answer formatting | |
 | Week 2 | LangSmith 셋업 (환경 변수, 프로젝트 생성) | |
-| Week 3 | 혜수의 Python 검색 API와 연결 | 실제 데이터로 프롬프트 테스트 |
+| Week 3 | 혜수의 Python 검색 API와 연결 | 실제 응답을 normalize한 뒤 프롬프트 테스트 |
 | Week 3-4 | 기존 LLM/SSE 코드에 RAG 프롬프트 연결 | CAG → RAG 전환 핵심 |
 | Week 4 | LangSmith 트레이싱 + 평가 데이터셋 구축 | |
 | Week 4-5 | 전체 파이프라인 평가 + 피드백 루프 | 전원 협업 |
