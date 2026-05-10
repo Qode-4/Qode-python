@@ -48,6 +48,27 @@ cp .env.example .env
 uvicorn app.api.main:app --reload --port 8000
 ```
 
+## API 사용법
+
+### POST /index
+
+Repo Sync가 완료된 프로젝트 코드를 인덱싱합니다.
+
+```bash
+curl -X POST http://127.0.0.1:8000/index \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectId": "proj_123",
+    "syncJobId": "sync_123"
+  }'
+```
+
+### GET /health
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
 ## 모듈별 사용법
 
 ### 파싱 + 청킹 (채연)
@@ -102,9 +123,9 @@ app/
 │   ├── filters.py           # 허용/제외 상수 + 유틸리티
 │   ├── loader.py            # 파일 수집 + Document 변환
 │   └── splitter.py          # 언어별 청킹
-├── embedding/               # 임베딩 + 벡터 저장 (예지) — 추후
+├── embedding/               # 임베딩 + 벡터 저장 (예지)
 ├── retrieval/               # 검색 + 검증 (혜수)
-└── api/                     # API 엔드포인트 — 추후
+└── api/                     # API 엔드포인트
 tests/
 ├── fixtures/                # 테스트용 mock 파일
 └── retrieval/
@@ -127,7 +148,7 @@ tests/
 - **Python** 3.11+
 - **LangChain** (langchain-core, langchain-text-splitters)
 - **FastAPI** + uvicorn
-- **PostgreSQL** + pgvector (추후)
+- **PostgreSQL** + pgvector
 - **OpenAI** text-embedding-3-small
 
 ## 문서
