@@ -31,14 +31,19 @@ class SearchResult(BaseModel):
 ```python
 # Request
 class IndexRequest(BaseModel):
-    project_id: str         # 프로젝트 ID
-    repo_path: str          # 동기화된 레포지토리 경로
+    projectId: str          # 프로젝트 ID
+    syncJobId: str          # Node.js 서버의 Repo Sync 작업 ID
 
 # Response
 class IndexResult(BaseModel):
     status: str             # "completed" | "failed"
+    projectId: str          # 프로젝트 ID
+    syncJobId: str          # Repo Sync 작업 ID
+    appEnv: str             # 실행 환경 ("local" | "production" 등)
+    repoPath: str | None    # 실제 인덱싱한 로컬 repo 경로 (성공 시)
     chunks_created: int     # 생성된 청크 수
     elapsed_ms: int         # 소요 시간
+    error: str | None       # 실패 사유 (실패 시)
 ```
 
 ### GET /health
@@ -48,8 +53,7 @@ class IndexResult(BaseModel):
 ```python
 # Response
 {
-    "status": "ok",
-    "version": "1.0.0"
+    "status": "ok"
 }
 ```
 

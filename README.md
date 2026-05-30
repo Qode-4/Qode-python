@@ -42,10 +42,31 @@ cp .env.example .env
 # .env 파일을 열어 DATABASE_URL, OPENAI_API_KEY 채우기
 ```
 
-### 3. 서버 실행 (추후)
+### 3. 서버 실행
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+uvicorn app.api.main:app --reload --port 8000
+```
+
+## API 사용법
+
+### POST /index
+
+Repo Sync가 완료된 프로젝트 코드를 인덱싱합니다.
+
+```bash
+curl -X POST http://127.0.0.1:8000/index \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectId": "proj_123",
+    "syncJobId": "sync_123"
+  }'
+```
+
+### GET /health
+
+```bash
+curl http://127.0.0.1:8000/health
 ```
 
 ## 모듈별 사용법
@@ -88,10 +109,9 @@ chunks = parse_and_chunk(
 pytest tests/ -v
 
 # 모듈별 테스트
-pytest tests/test_filters.py -v      # 필터
-pytest tests/test_loader.py -v       # 파일 수집
-pytest tests/test_splitter.py -v     # 청킹
-pytest tests/test_parsing_integration.py -v  # 통합
+pytest tests/retrieval/filter.py -v      # 검색 결과 필터
+pytest tests/retrieval/dedup.py -v       # 중복 제거
+pytest tests/retrieval/searcher.py -v    # 검색
 ```
 
 ## 디렉터리 구조
@@ -103,16 +123,18 @@ app/
 │   ├── filters.py           # 허용/제외 상수 + 유틸리티
 │   ├── loader.py            # 파일 수집 + Document 변환
 │   └── splitter.py          # 언어별 청킹
-├── embedding/               # 임베딩 + 벡터 저장 (예지) — 추후
-├── retrieval/               # 검색 + 검증 (혜수) — 추후
-└── api/                     # API 엔드포인트 — 추후
+├── embedding/               # 임베딩 + 벡터 저장 (예지)
+├── retrieval/               # 검색 + 검증 (혜수)
+└── api/                     # API 엔드포인트
 tests/
 ├── fixtures/                # 테스트용 mock 파일
-├── test_filters.py
-├── test_loader.py
-├── test_splitter.py
-└── test_parsing_integration.py
-docs/
+└── retrieval/
+    ├── filter.py
+    ├── dedup.py
+    ├── searcher.py
+    ├── pipeline.py
+    └── reranker.py
+.docs/
 ├── overview.md              # 프로젝트 개요
 ├── rag-pipeline.md          # RAG 파이프라인 상세
 ├── tech-stack.md            # 기술 스택
@@ -125,13 +147,13 @@ docs/
 
 - **Python** 3.11+
 - **LangChain** (langchain-core, langchain-text-splitters)
-- **FastAPI** + uvicorn (추후)
-- **PostgreSQL** + pgvector (추후)
-- **OpenAI** text-embedding-3-small (추후)
+- **FastAPI** + uvicorn
+- **PostgreSQL** + pgvector
+- **OpenAI** text-embedding-3-small
 
 ## 문서
 
-- [프로젝트 개요](docs/overview.md)
-- [RAG 파이프라인 상세](docs/rag-pipeline.md)
-- [파싱 + 청킹 구현 상세](docs/parsing-chunking-implementation.md)
-- [파싱 + 청킹 따라하기 가이드](docs/parsing-chunking-tutorial.md)
+- [프로젝트 개요](.docs/overview.md)
+- [RAG 파이프라인 상세](.docs/rag-pipeline.md)
+- [API 인터페이스](.docs/api-contracts.md)
+- [데이터베이스 스키마](.docs/database-schema.md)

@@ -19,3 +19,6 @@ venv/
 
 .claude
 docs
+
+# repo data
+.data/
