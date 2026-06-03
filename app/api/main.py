@@ -1,13 +1,22 @@
 import time
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from pydantic import BaseModel
 from app.config import APP_ENV, resolve_repo_path
+from app.db import init_database
 from app.embedding.store import reindex
 from app.parsing import parse_and_chunk
 from app.retrieval.pipeline import search_pipeline
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_database()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 class SearchRequest(BaseModel):
     query: str

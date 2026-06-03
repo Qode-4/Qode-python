@@ -42,7 +42,13 @@ cp .env.example .env
 # .env 파일을 열어 DATABASE_URL, OPENAI_API_KEY 채우기
 ```
 
-### 3. 서버 실행
+### 3. PostgreSQL pgvector 준비
+
+이 서비스는 `code_embeddings.embedding vector(1536)` 컬럼을 사용하므로 PostgreSQL 서버에 pgvector extension이 설치되어 있어야 합니다.
+
+OS별 설치 방법은 [.docs/pgvector-setup.md](.docs/pgvector-setup.md)를 참고하세요.
+
+### 4. 서버 실행
 
 ```bash
 uvicorn app.api.main:app --reload --port 8000
