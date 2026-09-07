@@ -7,7 +7,7 @@ from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from app.embedding.embedder import embed_query
 
-load_dotenv()
+load_dotenv(override=True)
 
 def get_connection():
     return psycopg.connect(os.getenv("DATABASE_URL"))
