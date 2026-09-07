@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from langchain_core.documents import Document
 from app.embedding.embedder import embed_documents
 
-load_dotenv()
+load_dotenv(override=True)
 
 def get_connection():
     return psycopg.connect(os.getenv("DATABASE_URL"))
