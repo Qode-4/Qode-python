@@ -13,7 +13,7 @@ from langchain_core.documents import Document
 # 허용 확장자: 이 확장자만 수집 
 ALLOWED_EXTENSIONS = [
     ".ts", ".tsx", ".js", ".jsx", ".py", ".java", ".go", ".rs", ".rb",
-    ".md", ".txt", ".yml", ".yaml", ".json", ".sql",
+    ".yml", ".yaml", ".json", ".sql",
 ]
 
 # 제외 디렉터리: 통째로 건너뜀 
@@ -22,11 +22,21 @@ EXCLUDE_DIRS = [
     "coverage", "__pycache__",
 ]
 
+# 테스트 디렉터리: 제외하지 않고 is_test=True 로 표시만 함
+TEST_DIRS = {"test", "tests", "__tests__", "spec", "specs", "e2e"}
+
 # 제외 파일 패턴 
 EXCLUDE_PATTERNS = [
     ".env", ".env.*", "credentials.*",
     "*.lock", "package-lock.json",
     "*.min.js", "*.map",
+]
+
+# 테스트 파일 패턴: 제외하지 않고 is_test=True 로 표시만 함
+TEST_PATTERNS = [
+    "*.test.*", "*.spec.*",
+    "test_*.py", "*_test.py", "conftest.py",
+    "*_test.go", "*Test.java", "*Tests.java", "*_spec.rb",
 ]
 
 # 확장자 → 언어 매핑 
@@ -62,6 +72,16 @@ def is_allowed_file(filename:str) -> bool:
         if fnmatch(name, pattern): 
             return False
     return True
+
+def is_test_file(relative_path: str) -> bool:
+    # 테스트 코드 여부 판단 / 경로 내 테스트 디렉터리 또는 파일명 패턴 매칭
+    parts = relative_path.replace("\\", "/").split("/")
+
+    if any(part.lower() in TEST_DIRS for part in parts[:-1]):
+        return True
+
+    name = parts[-1]
+    return any(fnmatch(name, pattern) for pattern in TEST_PATTERNS)
 
 def filter_chunks(chunks: list[Document]) -> list[Document]: # 청크 리스트 받아서 필터링을 함
     # 지금은 일단 Min_Chunk_Length보다 짧은 청크 제거하는 필터만 구현 (추후에 더 추가할 수 있음)
