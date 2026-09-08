@@ -13,7 +13,7 @@ from langchain_core.documents import Document
 # 허용 확장자: 이 확장자만 수집 
 ALLOWED_EXTENSIONS = [
     ".ts", ".tsx", ".js", ".jsx", ".py", ".java", ".go", ".rs", ".rb",
-    ".md", ".txt", ".yml", ".yaml", ".json", ".sql",
+    ".yml", ".yaml", ".json", ".sql",
 ]
 
 # 제외 디렉터리: 통째로 건너뜀 
