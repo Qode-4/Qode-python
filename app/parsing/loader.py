@@ -2,7 +2,7 @@ import logging
 import os
 from langchain_core.documents import Document
 from app.parsing.filters import (
-    is_allowed_file,detect_language,EXCLUDE_DIRS, EXCLUDE_PATTERNS,FILE_COUNT_WARNING_THRESHOLD
+    is_allowed_file,detect_language,is_test_file,EXCLUDE_DIRS, EXCLUDE_PATTERNS,FILE_COUNT_WARNING_THRESHOLD
 )
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,8 @@ def collect_documents(repo_path: str, project_id: str, max_files: int | None = N
                     "language": detect_language(ext), 
                     "extension": ext,
                     "file_size": os.path.getsize(file_path),
-                    "project_id": project_id, 
+                    "project_id": project_id,
+                    "is_test": is_test_file(relative_path),
                 }
             ))
 
