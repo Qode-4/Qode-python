@@ -8,7 +8,7 @@ def recall_at_k(
     '''top-k 안에 키워드를 포함한 청크가 있나?'''
     top_k = retrieved[:k]
     for doc in top_k:
-        if any(kw.lower() in doc.page_content for kw in keywords):
+        if any(kw.lower() in doc.page_content.lower() for kw in keywords):
             return 1.0
     return 0.0
 
