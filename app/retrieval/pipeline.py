@@ -1,7 +1,7 @@
 # pipeline.py
 import time
 from langchain_core.documents import Document
-from .searcher import search
+from .searcher import hybrid_search
 from .filter import filter_by_threshold
 from .dedup import dedup
 from .reranker import rerank
@@ -10,7 +10,7 @@ async def search_pipeline(query: str, project_id: str, top_k: int) -> dict:
     start_time = time.time()
 
     try:
-        raw_results = search(query, project_id, top_k)
+        raw_results = hybrid_search(query, project_id, top_k)
         filtered = filter_by_threshold(raw_results)
         deduped = dedup(filtered)
         reranked = rerank(query, deduped)
