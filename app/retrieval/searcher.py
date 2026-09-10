@@ -14,7 +14,7 @@ def get_connection():
 
 class CodeRetriever(BaseRetriever):
     project_id: str
-    top_k: int = 5
+    top_k: int = 20
 
     def _get_relevant_documents(self, query: str) -> list[Document]:
         query_vector = embed_query(query)
