@@ -4,7 +4,7 @@ from pathlib import Path
 import psycopg
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 MIGRATION_PATH = Path(__file__).resolve().parents[2] / "migrations" / "001_create_code_embeddings.sql"
 
