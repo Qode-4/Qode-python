@@ -79,9 +79,34 @@ TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_]+")
 # "정답이 6~20위에 있던" 청크가 병합에서 구제된다.
 CANDIDATE_K = 20
 
+# 질문 속 코드 식별자 후보: 영문자로 시작하는 3글자 이상 토큰 (Headers, follow_redirects 등)
+IDENTIFIER_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]{2,}")
+
 
 def tokenize(text: str) -> list[str]:
     return TOKEN_PATTERN.findall(text.lower())
+
+
+def _apply_def_boost(scores, contents: list[str], query: str) -> None:
+    """질의 식별자의 정의 청크("class X"/"def X", 대소문자 구분)를 일반 매칭 위로 승격.
+
+    ILIKE 하이브리드 구현에서 이식. 'Headers'처럼 흔한 토큰은 IDF가 낮아
+    BM25만으로는 정의 청크가 사용처 청크에 묻힌다 — 정의 청크 자체는 희소하므로
+    "어디 정의돼 있어?" 류 질문의 정답을 정확히 끌어올린다. scores를 제자리 수정.
+    """
+    markers = [
+        m for kw in dict.fromkeys(IDENTIFIER_PATTERN.findall(query))
+        for m in (f"class {kw}", f"def {kw}")
+    ]
+    if not markers:
+        return
+    # 매칭 1건의 보너스를 전체 최고 BM25 점수 이상으로 잡아
+    # 정의 매칭 수 → BM25 점수 순(ILIKE 구현의 hits DESC, score DESC)이 되게 한다
+    bonus = max(max(scores), 1.0)
+    for i, content in enumerate(contents):
+        hits = sum(marker in content for marker in markers)
+        if hits:
+            scores[i] += bonus * hits
 
 
 def _rrf_merge(ranked_lists: list[list[tuple]], top_k: int, k: int = 60) -> list[Document]:
@@ -132,8 +157,10 @@ def hybrid_search(query: str, project_id: str, top_k: int, include_tests: bool |
     bm25_rows = []
     query_tokens = tokenize(query)
     if rows and query_tokens:
-        bm25 = BM25Okapi([tokenize(r[0]) for r in rows])
+        contents = [r[0] for r in rows]
+        bm25 = BM25Okapi([tokenize(c) for c in contents])
         scores = bm25.get_scores(query_tokens)
+        _apply_def_boost(scores, contents, query)
         ranked = sorted(range(len(rows)), key=scores.__getitem__, reverse=True)
         bm25_rows = [rows[i] for i in ranked[:CANDIDATE_K] if scores[i] > 0]
 

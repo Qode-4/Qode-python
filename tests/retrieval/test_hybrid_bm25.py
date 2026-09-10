@@ -1,6 +1,6 @@
 from rank_bm25 import BM25Okapi
 
-from app.retrieval.searcher import tokenize, _rrf_merge
+from app.retrieval.searcher import tokenize, _rrf_merge, _apply_def_boost
 
 
 def make_row(content, source="a.py", start_line=1, score=0.5):
@@ -42,6 +42,31 @@ def test_rrf_keeps_cosine_score_in_metadata():
     # RRF 점수가 아니라 코사인 유사도가 score에 남아야 filter.py 계약이 유지된다
     merged = _rrf_merge([[make_row("only", score=0.42)], []], top_k=5)
     assert merged[0].metadata["score"] == 0.42
+
+
+def test_def_boost_lifts_definition_chunk():
+    # 흔한 토큰(headers) 반복으로 사용처 청크가 더 높게 나온 상황에서
+    # 정의 청크(class Headers)가 위로 올라와야 한다
+    contents = [
+        "headers = client.headers; print(headers, headers)",
+        "class Headers:\n    def __init__(self): ...",
+    ]
+    scores = [2.0, 0.5]
+    _apply_def_boost(scores, contents, "Headers 자료구조는 어떻게 생겼어?")
+    assert scores[1] > scores[0]
+
+
+def test_def_boost_noop_without_identifiers():
+    scores = [1.0, 2.0]
+    _apply_def_boost(scores, ["class ABC: pass", "x = 1"], "이 프로젝트 구조 설명해줘")
+    assert scores == [1.0, 2.0]
+
+
+def test_def_boost_is_case_sensitive():
+    # 'classify headers'는 'class Headers' 정의가 아니다
+    scores = [1.0]
+    _apply_def_boost(scores, ["classify headers here"], "Headers 어디에 정의돼 있어?")
+    assert scores == [1.0]
 
 
 def test_rrf_empty_bm25_list():
