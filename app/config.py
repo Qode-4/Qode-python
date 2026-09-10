@@ -7,12 +7,7 @@ load_dotenv(override=True)
 
 APP_ENV = os.getenv("APP_ENV", "local")
 
-# LOCAL_REPO_STORAGE_ROOT = Path(os.getenv("LOCAL_REPO_STORAGE_ROOT", ".")).resolve()
-_root = os.getenv("LOCAL_REPO_STORAGE_ROOT")
-if not _root:
-    raise RuntimeError("LOCAL_REPO_STORAGE_ROOT is not set")
-LOCAL_REPO_STORAGE_ROOT = Path(_root).resolve()
-
+LOCAL_REPO_STORAGE_ROOT = Path(os.getenv("LOCAL_REPO_STORAGE_ROOT", ".")).resolve()
 PROD_REPO_STORAGE_ROOT = Path(os.getenv("PROD_REPO_STORAGE_ROOT", ".")).resolve()
 
 

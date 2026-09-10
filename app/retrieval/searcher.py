@@ -32,6 +32,7 @@ class CodeRetriever(BaseRetriever):
     project_id: str
     top_k: int = 5
     include_tests: bool | None = None  # None이면 질의 내용으로 자동 판단
+
     def _get_relevant_documents(self, query: str) -> list[Document]:
         query_vector = embed_query(query)
         include_tests = (
