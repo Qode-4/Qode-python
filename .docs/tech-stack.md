@@ -117,7 +117,7 @@ Qode-python/
 ```bash
 # 1. 가상환경 생성
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate # venv\Scripts\Activate.ps1 (windows)
 
 # 2. 의존성 설치
 pip install -r requirements.txt

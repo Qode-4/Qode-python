@@ -1,31 +1,19 @@
 # reranker.py - 재정렬
 import logging
 import os
-import threading
-import torch
 
+from langchain_cohere import CohereRerank
 from langchain_core.documents import Document
 
+RERANKER_ENABLED = os.getenv("RERANKER_ENABLED", "true").lower() == "true"
 logger = logging.getLogger(__name__)
 
-RERANKER_MODEL = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
-RERANKER_ENABLED = os.getenv("RERANKER_ENABLED", "true").lower() == "true"
-
 _reranker = None
-_lock = threading.Lock()
-
 
 def _get_reranker():
-    #임포트 시점에 2.2GB를 로드하면 지연시간이 길어지기 때문에 첫 요청 때만 로드하도록 전역 변수
-    #중복 로드 방지를 위해 락을 걸음
     global _reranker
     if _reranker is None :
-        with _lock:
-            if _reranker is None: 
-                from FlagEmbedding import FlagReranker
-                logger.info("loading reranker: %s", RERANKER_MODEL)
-                _reranker = FlagReranker(RERANKER_MODEL, use_fp16=torch.cuda.is_available())
-                # _reranker = FlagReranker(RERANKER_MODEL, use_fp16=False)
+        _reranker = CohereRerank(model="rerank-v3.5")
     return _reranker
 
 def _fallback(docs: list[Document]) -> list[Document]:
@@ -43,18 +31,14 @@ def rerank(query: str, docs: list[Document], top_k: int | None = None) -> list[D
 
     try:
         reranker = _get_reranker()
-        scores = reranker.compute_score(
-            [[query, d.page_content] for d in docs],
-            normalize=True,
-        )
-        if not isinstance(scores, list): # 문서 1개 -> float
-            scores = [scores]
+        
+        reranked_docs = reranker.compress_documents(documents=docs, query=query)
 
-        for d, s in zip(docs, scores):
+        for d in reranked_docs:
             d.metadata["vector_score"] = d.metadata.get("score", 0.0)
-            d.metadata["rerank_score"] = float(s)
+            d.metadata["rerank_score"] = d.metadata.get("relevance_score", 0.0)
 
-        result = sorted(docs, key=lambda d: d.metadata["rerank_score"], reverse=True)
+        result = reranked_docs
 
     except Exception:
         logger.exception("rerank failed, falling back to vector score")
