@@ -1,0 +1,25 @@
+name: Deploy Python to EC2
+
+on:
+  push:
+    branches: ['main']
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT != '' && secrets.EC2_PORT || 22 }}
+          script: |
+            set -e
+            cd /srv/qode-python
+            git pull origin main
+            ./venv/bin/pip install -r requirements.txt
+            sudo systemctl restart qode-python
+            sleep 5
+            curl -fsS http://127.0.0.1:8000/health
