@@ -1,0 +1,29 @@
+# Worktrees
+.worktrees/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+.claude
+docs
+
+# repo data
+.data/
+
+# OS
+.DS_Store
+Thumbs.db

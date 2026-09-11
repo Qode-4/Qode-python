@@ -1,0 +1,13 @@
+langchain-core>=0.3.0
+langchain-text-splitters>=0.3.0
+langchain-openai>=0.3.0
+langchain-postgres>=0.0.17
+python-dotenv>=1.0.0
+pytest>=8.0.0
+pytest-asyncio
+ragas>=0.2.0
+psycopg[binary]>=3.0.0
+psycopg2-binary
+fastapi>=0.110.0
+uvicorn>=0.29.0
+rank-bm25>=0.2.2
