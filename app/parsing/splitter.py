@@ -40,21 +40,30 @@ def split_documents(docs: list[Document], chunk_size: int = DEFAULT_CHUNK_SIZE, 
 
         search_start = 0
         for i, chunk in enumerate(chunks):
-            # 청크 앞 50글자로 원본에서 위치 검색 (search_start 이후에서)
-            pos = doc.page_content.find(chunk.page_content[:50], search_start)
+            head = chunk.page_content[:50]
 
-            if(pos == -1):
-                # 검색 실패 시, 이전 청크의 끝에서 다시 검색
-                pos = doc.page_content.find(chunk.page_content[:50], search_start - chunk_overlap)
+            # 청크 앞 50글자로 원본에서 위치 검색 (search_start 이후에서)
+            pos = doc.page_content.find(head, search_start)
+
+            if pos == -1:
+                # 분할기가 앞뒤 공백을 정리하면 원문과 글자가 어긋나 못 찾는다.
+                # 겹침 구간만큼 되돌려 재검색한다 (음수 시작은 문서 끝에서 찾게 되므로 0으로 자른다).
+                pos = doc.page_content.find(head, max(0, search_start - chunk_overlap))
+
+            if pos == -1:
+                # 끝내 못 찾으면 줄 번호를 비운다.
+                # 틀린 줄을 근거로 인용하느니 줄 범위를 표시하지 않는 쪽이 낫다.
+                start_line = None
+                end_line = None
             else:
                 # pos 앞에 줄바꿈 개수 + 1 = 시작 줄 번호
                 start_line = doc.page_content[:pos].count("\n") + 1
 
+                # 시작 줄 + 청크 안의 줄바꿈 수 = 끝 줄
+                end_line = start_line + chunk.page_content.count("\n")
+
                 # 다음 청크는 현재 위치 이후에서 찾기 (중복 매칭 방지)
                 search_start = pos + 1
-            
-            # 시작 줄 + 청크 안의 줄바꿈 수 = 끝 줄
-            end_line = start_line + chunk.page_content.count("\n")
 
             # 청크 메타데이터에 위치 정보 추가
             chunk.metadata.update({
