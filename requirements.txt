@@ -1,3 +1,5 @@
+langchain>=1.0.0
+langchain-cohere>=0.5.0
 langchain-core>=0.3.0
 langchain-text-splitters>=0.3.0
 langchain-openai>=0.3.0
