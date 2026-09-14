@@ -4,6 +4,8 @@ from ragas.llms import llm_factory
 from ragas.metrics.collections import ContextPrecisionWithReference, ContextRecall
 from app.eval.dataset import QA_PAIRS
 from app.retrieval.pipeline import search_pipeline
+import pandas as pd
+
 import os
 
 async def run():
@@ -41,6 +43,10 @@ async def run():
         print(f"Q: {qa['query']}")
         print(f"  precision: {precision.value:.3f}")
         print(f"  recall:    {recall.value:.3f}")
+
+    # 엑셀 파일로 저장
+    df = pd.DataFrame(results)
+    df.to_csv("eval_results.csv", index=False)
 
     # 평균 출력
     avg_precision = sum(r["context_precision"] for r in results) / len(results)
