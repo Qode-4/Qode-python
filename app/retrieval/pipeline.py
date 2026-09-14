@@ -1,11 +1,12 @@
 # pipeline.py
 import time
-from langchain_core.documents import Document
+from langsmith import traceable
 from .searcher import hybrid_search
 from .filter import filter_by_threshold
 from .dedup import dedup
 from .reranker import rerank
 
+@traceable(name="search_pipeline")
 async def search_pipeline(query: str, project_id: str, top_k: int) -> dict:
     start_time = time.time()
 

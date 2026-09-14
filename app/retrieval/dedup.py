@@ -1,6 +1,8 @@
 # dedup.py - 중복 청크 제거
 from langchain_core.documents import Document
+from langsmith import traceable
 
+@traceable(name="dedup")
 def dedup(docs: list[Document]) -> list[Document]:
     seen = set()
     result = []
