@@ -13,7 +13,7 @@ async def search_pipeline(query: str, project_id: str, top_k: int) -> dict:
         raw_results = hybrid_search(query, project_id, top_k)
         filtered = filter_by_threshold(raw_results)
         deduped = dedup(filtered)
-        reranked = rerank(query, deduped)
+        reranked = rerank(query, deduped, top_k)
 
         return {
             "chunks": reranked,

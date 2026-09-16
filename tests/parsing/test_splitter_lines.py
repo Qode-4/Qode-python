@@ -4,7 +4,8 @@ import app.parsing.splitter as splitter_module
 from app.parsing.splitter import split_documents
 
 
-def make_doc(text, language="python"):
+def make_doc(text, language="unknown"):
+    # 문자 기준 분할기가 도는 언어로 고정한다 — 코드는 AST 경로(test_splitter_ast.py)로 간다
     return Document(page_content=text, metadata={"language": language, "project_id": "p1"})
 
 
@@ -48,9 +49,7 @@ class _UnlocatableSplitter:
 def test_unlocatable_chunk_has_no_line_range(monkeypatch):
     # 열린 과제 13-13 — 원문에서 못 찾으면 옛 코드는 start_line을 정하지 않았다.
     # 첫 청크면 NameError, 이후 청크면 이전 청크의 줄 번호를 그대로 인용한다.
-    monkeypatch.setattr(
-        splitter_module, "_build_language_splitter", lambda *_: {"python": _UnlocatableSplitter()}
-    )
+    monkeypatch.setattr(splitter_module, "_build_default_splitter", lambda *_: _UnlocatableSplitter())
     chunks = split_documents([make_doc("a = 1\nb = 2\nc = 3\n")], chunk_size=100, chunk_overlap=20)
 
     # 못 찾은 청크는 줄 범위를 비운다 — 틀린 줄을 붙이지 않는다

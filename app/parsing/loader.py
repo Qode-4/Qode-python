@@ -36,7 +36,7 @@ def collect_documents(repo_path: str, project_id: str, max_files: int | None = N
 
             # 파일 읽기 (바이너리 파일이나 읽기 실패 시 건너뜀)
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, "r", encoding="utf-8-sig") as f:  # BOM 이 있으면 벗긴다 — 첫 줄이 \ufeff 로 시작하면 청크·줄 번호가 어긋난다
                     content = f.read()
             except (UnicodeDecodeError, OSError):
                 logger.warning("파일 읽기 실패, 건너뜀: %s", relative_path)
