@@ -1,18 +1,15 @@
 # pipeline.py
 import time
-from langsmith import traceable
+from langchain_core.documents import Document
 from .searcher import hybrid_search
 from .filter import filter_by_threshold
 from .dedup import dedup
 from .reranker import rerank
-from .translate import translate_text
 
-@traceable(name="search_pipeline")
 async def search_pipeline(query: str, project_id: str, top_k: int) -> dict:
     start_time = time.time()
 
     try:
-        query = translate_text(query) # 번역
         raw_results = hybrid_search(query, project_id, top_k)
         filtered = filter_by_threshold(raw_results)
         deduped = dedup(filtered)
