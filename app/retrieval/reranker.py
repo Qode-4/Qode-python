@@ -33,7 +33,9 @@ def rerank(query: str, docs: list[Document], top_k: int | None = None) -> list[D
 
     try:
         reranker = _get_reranker()
-        
+        # CohereRerank 의 top_n 기본값은 3 이다 — 그대로 두면 top_k 를 몇으로 올려도 LLM 에는 3개만 간다
+        # (2026-09-16 실측: top_k 10 → final 3). 전부 돌려받고 아래에서 top_k 로 자른다.
+        reranker.top_n = len(docs)
         reranked_docs = reranker.compress_documents(documents=docs, query=query)
 
         for d in reranked_docs:

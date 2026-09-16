@@ -13,6 +13,12 @@ venv/
 .env.*
 !.env.example
 
+# Node
+# 루트 앞의 / 가 중요하다. node_modules 로만 쓰면 tests/fixtures/node_modules/ 까지
+# 같이 무시되는데, 그 fixture 는 app/parsing/filters.py 가 node_modules 를 인덱싱에서
+# 빼는지 검증하는 자산이다.
+/node_modules/
+
 # IDE
 .idea/
 .vscode/
