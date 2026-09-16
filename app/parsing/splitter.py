@@ -1,8 +1,41 @@
+import re
+
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_CHUNK_OVERLAP = 200
+
+# ===== 마크다운 (열린 과제 13-1) =====
+# LangChain 기본 마크다운 규칙은 닫는 펜스 '```\n' 앞에서 자른다. 그러면 코드블록은 A 청크에,
+# 닫는 ``` 는 B 청크 첫 줄에 놓여 B를 마크다운으로 읽으면 그 아래가 전부 코드블록으로 먹힌다.
+# 게다가 '\n# ' 헤딩 규칙이 코드블록 안 주석에도 걸려 블록 한가운데를 자른다.
+# 해법: 펜스 블록 안의 줄바꿈을 잠시 다른 문자로 바꿔 분할 규칙이 블록 안을 못 보게 하고,
+# 자를 자리는 닫는 펜스가 아니라 *여는* 펜스 앞으로 옮긴다.
+FENCED_BLOCK = re.compile(r"^```[^\n]*\n.*?^```[ \t]*$", re.MULTILINE | re.DOTALL)
+_NL = "\x00"
+_MARKDOWN_SEPARATORS = [
+    r"\n#{1,6} ",      # 헤딩
+    r"\n(?=```)",      # 여는 펜스 앞 (닫는 펜스 앞은 _NL 이라 안 걸린다)
+    r"\n\*\*\*+\n", r"\n---+\n", r"\n___+\n",
+    "\n\n", "\n",
+    _NL + r"(?!```)",   # chunk_size 를 넘는 코드블록만 여기서 줄 단위로 잘린다. 닫는 펜스는 마지막 줄에 붙여 둔다
+    " ", "",
+]
+
+
+def _build_markdown_splitter(chunk_size: int, chunk_overlap: int) -> RecursiveCharacterTextSplitter:
+    return RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size, chunk_overlap=chunk_overlap,
+        separators=_MARKDOWN_SEPARATORS, is_separator_regex=True,
+    )
+
+
+def _split_markdown(text: str, splitter: RecursiveCharacterTextSplitter) -> list[str]:
+    protected = FENCED_BLOCK.sub(lambda m: m.group(0).replace("\n", _NL), text)
+    # 복원한 줄바꿈만 벗긴다 — strip() 이면 코드 첫 줄의 들여쓰기까지 사라진다
+    return [c.replace(_NL, "\n").strip("\n") for c in splitter.split_text(protected)]
+
 
 def _build_default_splitter(chunk_size: int, chunk_overlap: int) -> RecursiveCharacterTextSplitter:
     # 기본 분할기 
@@ -22,21 +55,27 @@ def _build_language_splitter(chunk_size: int, chunk_overlap: int) -> dict[str, R
         "go": RecursiveCharacterTextSplitter.from_language(Language.GO, chunk_size=chunk_size, chunk_overlap=chunk_overlap),
         "rust": RecursiveCharacterTextSplitter.from_language(Language.RUST, chunk_size=chunk_size, chunk_overlap=chunk_overlap),
         "ruby": RecursiveCharacterTextSplitter.from_language(Language.RUBY, chunk_size=chunk_size, chunk_overlap=chunk_overlap),
-        "markdown": RecursiveCharacterTextSplitter.from_language(Language.MARKDOWN, chunk_size=chunk_size, chunk_overlap=chunk_overlap),
     }
 
 def split_documents(docs: list[Document], chunk_size: int = DEFAULT_CHUNK_SIZE, chunk_overlap: int = DEFAULT_CHUNK_OVERLAP) -> list[Document]:
     default_splitter = _build_default_splitter(chunk_size, chunk_overlap)
     language_splitters = _build_language_splitter(chunk_size, chunk_overlap)
+    markdown_splitter = _build_markdown_splitter(chunk_size, chunk_overlap)
 
     all_chunks: list[Document] = []
 
     for doc in docs:
         # metadata에서 language 추출, 해당 언어에 맞는 분할기가 있으면 사용, 없으면 default_splitter 사용
         language = doc.metadata.get("language", "unknown")
-        splitter = language_splitters.get(language, default_splitter)
 
-        chunks = splitter.split_documents([doc])
+        if language == "markdown":
+            chunks = [
+                Document(page_content=text, metadata=dict(doc.metadata))
+                for text in _split_markdown(doc.page_content, markdown_splitter) if text
+            ]
+        else:
+            splitter = language_splitters.get(language, default_splitter)
+            chunks = splitter.split_documents([doc])
 
         search_start = 0
         for i, chunk in enumerate(chunks):
