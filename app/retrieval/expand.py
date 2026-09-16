@@ -10,16 +10,16 @@ from langchain_core.documents import Document
 
 from .searcher import get_connection
 
-# `self.이름(` 만 따라간다 — 같은 객체의 메서드 호출, 즉 호출 체인의 다음 단계.
-# 1차 시도(괄호 뒤따르는 모든 이름, 상위 3청크, 상한 5)는 join·read·URL(·ByteStream( 같은 범용 이름의 정의를
-# 끌어와 4W 종합 76.2 → 73.1% 로 내렸다 (2026-09-16 3회차). Why 문항은 코드 맥락이 늘수록 설계 의도에서 멀어졌다.
-CALL_PATTERN = re.compile(r"\bself\.([A-Za-z_][A-Za-z0-9_]{2,})\s*\(")
+# 뒤에 괄호가 오는 이름만 따라간다 — 실제로 *호출된* 함수·생성된 클래스.
+# 타입 표기(`url: URL | str`)·속성 이름까지 따라가면 첫 청크의 시그니처에 있는 URL 클래스 조각이 자리를 다 차지했다 (2026-09-16 실측).
+CALL_PATTERN = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]{2,})\s*\(")
 
-# 절차·위치를 묻는 질문에만 켠다. ponytail: 한국어 키워드 휴리스틱 — Why·What 에는 확장이 손해라는 3회차 실측이 근거.
-PROCEDURE_QUERY = re.compile(r"절차|흐름|과정|순서|단계|어디|호출|전달|경로")
-
-MAX_EXPANDED = 3
-SOURCE_TOP_N = 2
+# 붙이는 상한. 흔한 이름(get·read·close)이 많아 한도가 없으면 수십 개가 따라온다.
+# ponytail: 상한·우선순위(리랭크 상위 청크의 이름부터)만으로 잡음을 막는다. What 이 내려가면 3으로 줄인다.
+MAX_EXPANDED = 5
+# 이름을 캐는 출발 청크는 리랭크 상위 몇 개까지만. 10위권 청크(CLI·다른 모듈)의 호출까지 따라가면
+# aclose·iter_bytes 같은 무관한 정의가 자리를 채웠다 (2026-09-16 실측).
+SOURCE_TOP_N = 3
 
 
 def _fetch_definitions(project_id: str, names: list[str], include_tests: bool) -> list[tuple]:
@@ -43,8 +43,8 @@ def _chunk_key(meta: dict) -> tuple:
     return (meta.get("source"), meta.get("start_line"))
 
 
-def expand_symbols(docs: list[Document], project_id: str, include_tests: bool, query: str, limit: int = MAX_EXPANDED) -> list[Document]:
-    if not docs or limit <= 0 or not PROCEDURE_QUERY.search(query):
+def expand_symbols(docs: list[Document], project_id: str, include_tests: bool, limit: int = MAX_EXPANDED) -> list[Document]:
+    if not docs or limit <= 0:
         return docs
 
     present = {_chunk_key(d.metadata) for d in docs}
@@ -68,11 +68,11 @@ def expand_symbols(docs: list[Document], project_id: str, include_tests: bool, q
     for name, mentioned_in in wanted.items():
         if len(expanded) >= limit:
             break
-        # 이름 하나에 정의 청크 하나만, 그리고 *같은 파일* 것만 — self.send() 의 send 는 그 클래스가 있는 파일에 있다.
+        # 이름 하나에 정의 청크 하나만 — 같은 파일 것을 우선하고(Client.get 이 부른 send 는 같은 파일의 send),
         # 큰 클래스가 여러 조각으로 잘린 경우·Client/AsyncClient 에 같은 이름이 있는 경우 첫 조각만 붙인다
         candidates = sorted(
-            (c for c in by_name.get(name, []) if c[1].get("source") == mentioned_in and _chunk_key(c[1]) not in present),
-            key=lambda c: c[1].get("start_line") or 0,
+            (c for c in by_name.get(name, []) if _chunk_key(c[1]) not in present),
+            key=lambda c: (c[1].get("source") != mentioned_in, c[1].get("source") or "", c[1].get("start_line") or 0),
         )
         if not candidates:
             continue

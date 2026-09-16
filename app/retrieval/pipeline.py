@@ -16,7 +16,7 @@ async def search_pipeline(query: str, project_id: str, top_k: int) -> dict:
         deduped = dedup(filtered)
         reranked = rerank(query, deduped, top_k)
         # 리랭크 결과 본문이 부르는 함수·클래스의 정의 청크를 한 홉 더 붙인다 (뒤에 덧붙이므로 trimContext 에 잘려도 원래 결과가 먼저 남는다)
-        expanded = expand_symbols(reranked, project_id, include_tests=is_test_query(query), query=query)
+        expanded = expand_symbols(reranked, project_id, include_tests=is_test_query(query))
 
         return {
             "chunks": expanded,
