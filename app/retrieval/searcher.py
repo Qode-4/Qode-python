@@ -6,6 +6,7 @@ import psycopg
 from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
+from langsmith import traceable
 from rank_bm25 import BM25Okapi
 from app.embedding.embedder import embed_query
 
@@ -31,7 +32,7 @@ def is_test_query(query: str) -> bool:
 
 class CodeRetriever(BaseRetriever):
     project_id: str
-    top_k: int = 5
+    top_k: int
     include_tests: bool | None = None  # None이면 질의 내용으로 자동 판단
 
     def _get_relevant_documents(self, query: str) -> list[Document]:
@@ -128,7 +129,7 @@ def _rrf_merge(ranked_lists: list[list[tuple]], top_k: int, k: int = 60) -> list
     ordered = sorted(rrf_scores, key=rrf_scores.get, reverse=True)[:top_k]
     return [docs[key] for key in ordered]
 
-
+@traceable(name="hybrid_search")
 def hybrid_search(query: str, project_id: str, top_k: int, include_tests: bool | None = None) -> list[Document]:
     query_vector = embed_query(query)
     if include_tests is None:
