@@ -81,6 +81,7 @@ def test_python_functions_are_not_cut_in_the_middle():
     # 작은 것(import·상수·한 줄 함수)은 홀로 서지 않고 이웃과 합쳐져 50자 하한에 안 걸린다
     consts = whole_in_one_chunk(chunks, "DEFAULT_TIMEOUT = 5.0")
     assert "import os" in consts.page_content
+    assert consts.metadata["symbol_kind"] != "module", "파이썬 루트 노드(module)를 정의로 보면 안 된다"
     assert all(len(c.page_content) >= 50 for c in chunks)
 
 

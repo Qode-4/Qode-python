@@ -170,7 +170,8 @@ def _split_code_ast(doc: Document, grammar: str, chunk_size: int) -> list[Docume
 
     def walk(node: Node, owner) -> None:
         symbol = owner
-        is_definition = _is_definition(node)
+        # 루트는 제외 — 파이썬 루트 노드 타입이 "module" 이라 루비의 module 정의와 이름이 겹친다
+        is_definition = node.parent is not None and _is_definition(node)
         if is_definition:
             symbol = (_symbol_name(node), node.type)
         length = text_len(node.start_byte, node.end_byte)
