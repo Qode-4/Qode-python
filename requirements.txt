@@ -1,5 +1,6 @@
 langchain>=1.0.0
 langsmith>=0.1.0
+google-cloud-translate>=3.15.0
 langchain-cohere>=0.5.0
 langchain-core>=0.3.0
 langchain-text-splitters>=0.3.0
