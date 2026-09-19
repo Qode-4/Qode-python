@@ -21,7 +21,7 @@ app = FastAPI(lifespan=lifespan)
 class SearchRequest(BaseModel):
     query: str
     project_id: str
-    top_k: int = 5
+    top_k: int = 10  # 열린 과제 13-19. Node rag.service.ts RAG_TOP_K 와 같이 움직인다
 
 
 class IndexRequest(BaseModel):
