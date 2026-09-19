@@ -33,3 +33,8 @@ docs
 # OS
 .DS_Store
 Thumbs.db
+
+*혜수
+my_test/
+# Credentials
+key.json
