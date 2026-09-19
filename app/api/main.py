@@ -1,7 +1,7 @@
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from app.config import APP_ENV, resolve_repo_path
 from app.db import init_database
@@ -64,6 +64,9 @@ def index(req: IndexRequest):
             "elapsed_ms": int((time.time() - start_time) * 1000),
             "error": str(e),
         }
+        print(response)
+        # 열린 과제 13-6. 200 으로 돌려주면 Node 가 성공으로 알고 동기화를 done 으로 닫는다
+        raise HTTPException(status_code=500, detail=response)
 
     print(response)
     return response
