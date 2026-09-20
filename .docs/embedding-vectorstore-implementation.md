@@ -1,8 +1,8 @@
-# 임베딩 + 벡터 저장 구현 상세 (예지)
+# 임베딩 + 벡터 저장 구현 상세
 
 ## 개요
 
-채연이 만든 `list[Document]`를 받아서 OpenAI 임베딩 API로 벡터로 변환하고, Aurora PostgreSQL + pgvector에 저장한다.
+파싱 단계가 만든 `list[Document]`를 받아서 OpenAI 임베딩 API로 벡터로 변환하고, Aurora PostgreSQL + pgvector에 저장한다.
 
 ---
 
@@ -128,9 +128,9 @@ reindex("proj_123", new_chunks)
 
 ---
 
-## 혜수(검색)와의 연결 포인트
+## 검색 단계와의 연결 포인트
 
-혜수는 `code_embeddings` 테이블에서 코사인 유사도 기반으로 검색한다.
+검색 단계는 `code_embeddings` 테이블에서 코사인 유사도 기반으로 검색한다.
 
 ```sql
 -- 벡터 검색 예시

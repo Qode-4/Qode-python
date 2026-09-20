@@ -100,7 +100,7 @@ Project analysis cache:
 
 ## 전환 시 변경 포인트
 
-Node.js 서버에서 수빈이 수정할 부분:
+Node.js 서버에서 수정할 부분:
 
 ```typescript
 // 변경 전 (CAG)

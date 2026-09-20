@@ -49,7 +49,7 @@ OPENAI_API_KEY=sk-...
 HOST=0.0.0.0
 PORT=8000
 
-# LangSmith (선택, 수빈 담당)
+# LangSmith (선택)
 # LANGCHAIN_TRACING_V2=true
 # LANGCHAIN_API_KEY=ls__...
 # LANGCHAIN_PROJECT=qode-rag
@@ -78,15 +78,15 @@ Qode-python/
 ├── app/
 │   ├── main.py              # FastAPI 앱 진입점
 │   ├── config.py             # 환경 변수 설정
-│   ├── parsing/              # 채연: 파싱 + 청킹
+│   ├── parsing/              # 파싱 + 청킹
 │   │   ├── loader.py         # Document Loader
 │   │   ├── splitter.py       # Text Splitter
 │   │   └── filters.py        # 확장자/패턴 필터
-│   ├── embedding/            # 예지: 임베딩 + 벡터 저장
+│   ├── embedding/            # 임베딩 + 벡터 저장
 │   │   ├── embedder.py       # OpenAI 임베딩
 │   │   ├── vectorstore.py    # PGVector 저장
 │   │   └── schema.sql        # 테이블 DDL
-│   ├── retrieval/            # 혜수: 검색 + 검증
+│   ├── retrieval/            # 검색 + 검증
 │   │   ├── retriever.py      # Retriever
 │   │   ├── reranker.py       # Rerank 로직
 │   │   └── validator.py      # 검색 검증
@@ -105,7 +105,6 @@ Qode-python/
 │   ├── qode-server-integration.md
 │   ├── tech-stack.md
 │   ├── api-contracts.md
-│   └── task/                 # 팀원별 작업 명세
 ├── requirements.txt
 ├── .env.example
 ├── .gitignore
