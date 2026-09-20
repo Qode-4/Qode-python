@@ -40,18 +40,7 @@ Qode의 RAG(Retrieval-Augmented Generation) 파이프라인을 담당하는 **Py
 - 질문 임베딩 → 벡터 유사도 검색 → 정제/rerank → 관련 청크 반환
 - Node.js 서버가 반환된 청크로 프롬프트를 조립해서 LLM에 전달
 
-## 팀 분담
-
-| 담당 | 영역 | 언어 |
-|------|------|------|
-| 채연 | 파싱 + 청킹 | Python |
-| 예지 | 임베딩 + 벡터 저장 + DB 스키마 | Python |
-| 혜수 | 검색 + 검증 | Python |
-| 수빈 | 질의응답 + LangSmith | TypeScript (기존 Qode 서버) |
-
-상세 작업 내용은 `docs/task/` 폴더 참고.
-
 ## 2단계 확장 계획
 
-- **Unstructured**: PDF/DOCX/PPTX 파싱 지원 추가 (채연 담당)
-- **LlamaIndex**: 고급 검색 — rerank, 부모-자식 청크 확장, Query Engine (혜수 담당)
+- **Unstructured**: PDF/DOCX/PPTX 파싱 지원 추가
+- **LlamaIndex**: 고급 검색 — rerank, 부모-자식 청크 확장, Query Engine

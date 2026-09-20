@@ -5,18 +5,15 @@
 ```
 인덱싱 (오프라인, Repo Sync 시):
 [파일 수집] → [청킹] → [임베딩] → [벡터 DB 저장]
-   채연          채연       예지         예지
 
 질의응답 (온라인, 사용자 질문 시):
 [질문 임베딩] → [벡터 검색] → [정제/rerank] → [청크 반환]
-    혜수           혜수           혜수           혜수
                                                   ↓ HTTP
                                           [프롬프트 조립] → [LLM 호출] → [응답]
-                                              수빈            수빈         수빈
                                            (Node.js)       (Node.js)    (Node.js)
 ```
 
-## Stage 1: 파싱 + 청킹 (채연)
+## Stage 1: 파싱 + 청킹 (`app/parsing`)
 
 ### 파일 수집
 
@@ -83,7 +80,7 @@ Document(
 )
 ```
 
-## Stage 2: 임베딩 + 벡터 저장 (예지)
+## Stage 2: 임베딩 + 벡터 저장 (`app/embedding`)
 
 ### 임베딩
 
@@ -116,7 +113,7 @@ text-embedding-3-small 기준:
 - 비용: $0.002 (Repo Sync 1회당 약 0.2센트)
 ```
 
-## Stage 3: 검색 + 검증 (혜수)
+## Stage 3: 검색 + 검증 (`app/retrieval`)
 
 ### 검색 파이프라인
 
@@ -154,9 +151,9 @@ async def index_endpoint(request: IndexRequest):
     ...
 ```
 
-## Stage 4: 질의응답 + LangSmith (수빈, Node.js)
+## Stage 4: 질의응답 + LangSmith (Qode-Server, Node.js)
 
-수빈은 기존 Qode 서버(TypeScript)에서 작업한다.
+이 단계는 기존 Qode 서버(TypeScript)에 있다.
 
 ### Python 서비스 호출
 
@@ -188,8 +185,8 @@ const prompt = `다음 코드를 참고하여 질문에 답하세요.\n\n${conte
 ## 단계 간 인터페이스 정리
 
 ```
-채연 → 예지:  Document(page_content, metadata)  # LangChain 표준
-예지 → DB:    code_embeddings 테이블에 INSERT
-혜수 → DB:    code_embeddings 테이블에서 SELECT
-혜수 → 수빈:  SearchResult(chunks, search_meta)  # HTTP JSON
+parsing → embedding:      Document(page_content, metadata)  # LangChain 표준
+embedding → DB:           code_embeddings 테이블에 INSERT
+retrieval → DB:           code_embeddings 테이블에서 SELECT
+retrieval → Qode-Server:  SearchResult(chunks, search_meta)  # HTTP JSON
 ```

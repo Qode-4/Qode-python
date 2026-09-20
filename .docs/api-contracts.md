@@ -11,18 +11,21 @@
 class SearchRequest(BaseModel):
     query: str              # 사용자 질문
     project_id: str         # 프로젝트 ID
-    top_k: int = 5          # 반환할 청크 수
+    top_k: int = 10         # 반환할 청크 수. Qode-Server rag.service.ts 의 RAG_TOP_K 와 같이 움직인다
 
 # Response
 class RetrievedChunk(BaseModel):
-    page_content: str       # 청크 텍스트
-    score: float            # 유사도 점수 (0~1)
-    metadata: dict          # source, language, chunk_index, start_line, end_line, project_id
+    content: str            # 청크 텍스트
+    metadata: dict          # source, language, chunk_index, start_line, end_line, project_id, is_test,
+                            # score(코사인). 리랭크가 동작하면 vector_score, rerank_score 추가
 
 class SearchResult(BaseModel):
     chunks: list[RetrievedChunk]
-    search_meta: dict       # total_found, search_time_ms
+    search_meta: dict       # total_found, after_filter, after_dedup, final, search_time_ms
+                            # 파이프라인 예외 시 chunks=[] 와 search_meta.error 로 200 응답
 ```
+
+Qode-Server 쪽은 `normalizeSearchResult()`가 `content` → `page_content`로, `metadata.score`를 밖으로 꺼내 내부 타입으로 바꾼다.
 
 ### POST /index
 
@@ -59,16 +62,16 @@ class IndexResult(BaseModel):
 
 ---
 
-## 내부 인터페이스 (팀원 간)
+## 내부 인터페이스 (모듈 간)
 
-### 채연 → 예지: Document (LangChain 표준)
+### parsing → embedding: Document (LangChain 표준)
 
-채연의 파싱+청킹 결과를 예지의 임베딩 단계로 전달.
+파싱+청킹 결과를 임베딩 단계로 전달.
 
 ```python
 from langchain.schema import Document
 
-# 채연이 반환하는 것
+# parse_and_chunk() 가 반환하는 것
 documents: list[Document]
 
 # 각 Document의 구조
@@ -87,16 +90,16 @@ Document(
 )
 ```
 
-### 예지 → 혜수: pgvector 테이블
+### embedding → retrieval: pgvector 테이블
 
-예지가 저장한 벡터를 혜수가 검색한다. 직접 함수 호출이 아니라 DB를 통해 연결.
+저장된 벡터를 검색 단계가 읽는다. 직접 함수 호출이 아니라 DB를 통해 연결.
 
 ```sql
--- 예지가 저장
+-- embedding.store 가 저장
 INSERT INTO code_embeddings (embedding, content, metadata, project_id)
 VALUES ($1, $2, $3, $4);
 
--- 혜수가 검색
+-- retrieval.searcher 가 검색
 SELECT content, metadata, 1 - (embedding <=> $1) AS score
 FROM code_embeddings
 WHERE project_id = $2
@@ -104,28 +107,32 @@ ORDER BY embedding <=> $1
 LIMIT $3;
 ```
 
-### 혜수 → 수빈: SearchResult (HTTP JSON)
+### retrieval → Qode-Server: SearchResult (HTTP JSON)
 
-혜수의 Python 서비스가 수빈의 Node.js 서버에 HTTP로 반환.
+Python 서비스가 Node.js 서버에 HTTP로 반환.
 
 ```json
 {
     "chunks": [
         {
-            "page_content": "function verifyToken...",
-            "score": 0.92,
+            "content": "function verifyToken...",
             "metadata": {
                 "source": "src/auth.ts",
                 "language": "typescript",
                 "chunk_index": 0,
                 "start_line": 12,
                 "end_line": 30,
-                "project_id": "proj_123"
+                "project_id": "proj_123",
+                "is_test": false,
+                "score": 0.92
             }
         }
     ],
     "search_meta": {
         "total_found": 15,
+        "after_filter": 15,
+        "after_dedup": 12,
+        "final": 10,
         "search_time_ms": 45
     }
 }
@@ -148,3 +155,4 @@ LIMIT $3;
 | `end_line` | int | X | 원본 파일 끝 라인 | `30` |
 | `project_id` | string | O | 프로젝트 ID | `"proj_123"` |
 | `file_size` | int | X | 원본 파일 크기 (바이트) | `2048` |
+| `is_test` | bool | O | 테스트 디렉터리/파일 여부. 테스트를 묻는 질의가 아니면 검색에서 제외 | `false` |

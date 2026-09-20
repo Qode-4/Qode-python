@@ -10,7 +10,7 @@ QODE-PYTHON/
 ├── app/
 │   ├── api/
 │   │   └── main.py          # FastAPI 서버 진입점
-│   ├── embedding/           # 임베딩 처리 (예지 님)
+│   ├── embedding/           # 임베딩 처리
 │   ├── eval/
 │   │   ├── dataset.py       # 평가용 QA 데이터셋 (QA_PAIRS)
 │   │   ├── evaluatate.py    # 평가 로직
@@ -23,7 +23,7 @@ QODE-PYTHON/
 │   │   ├── reranker.py      # 재순위화
 │   │   ├── dedup.py         # 중복 제거
 │   │   └── filter.py        # 필터링
-│   └── parsing/             # 문서 파싱 (채연 님)
+│   └── parsing/             # 문서 파싱
 └── tests/                   # 테스트 코드
 ```
 

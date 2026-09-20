@@ -4,6 +4,7 @@ import os
 
 from langchain_cohere import CohereRerank
 from langchain_core.documents import Document
+from langsmith import traceable
 
 RERANKER_ENABLED = os.getenv("RERANKER_ENABLED", "true").lower() == "true"
 logger = logging.getLogger(__name__)
@@ -19,6 +20,7 @@ def _get_reranker():
 def _fallback(docs: list[Document]) -> list[Document]:
     return sorted(docs, key=lambda d: d.metadata.get("score", 0.0), reverse=True)
 
+@traceable(name="rerank")
 def rerank(query: str, docs: list[Document], top_k: int | None = None) -> list[Document]:
     # Cross-encoder로 재정렬
     # 실패하거나 비활성화된 경우 백터 검색 점수 순으로 폴백
